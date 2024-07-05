@@ -1,0 +1,160 @@
+java  1.8.0_302  environment loaded 
+------------------------------
+r-env 4.4.0
+https://docs.csc.fi/apps/r-env
+------------------------------
+Job Started :Wed Jul 3 16:21:10 EEST 2024
+> args <- commandArgs(trailingOnly = TRUE) ## 0: ID, 1:MAPDATA, 2:OD, 3: Results Folder
+> print(args)
+[1] "/projappl/project_2010418/Batch_run_test/R_code_for_BatchRun/Data/Helsinki_map_data"                          
+[2] "/projappl/project_2010418/Batch_run_test/R_code_for_BatchRun/Data/h3_OD_Hexagons_Helsinki_latlon_filtered.csv"
+[3] "/projappl/project_2010418/Batch_run_test/R_code_for_BatchRun/Batch_output"                                    
+[4] "15-08-2022"                                                                                                   
+[5] "08:30:00"                                                                                                     
+[6] "76"                                                                                                           
+[7] "100"                                                                                                          
+[8] "3"                                                                                                            
+> 
+> Datestr <- args[4] 
+> Timestr <- args[5]
+> 
+> from_index <- args[6]
+> to_index <- args[7]
+> 
+> Batch_num <- args[8] ## args[9]
+> 
+> # print task number
+> ##print(paste0('Printing inputs from command line: ', args)
+> 
+> 
+> 
+> library(tidyverse)
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+> library(sf)
+Linking to GEOS 3.12.1, GDAL 3.8.5, PROJ 9.4.0; sf_use_s2() is TRUE
+> library(data.table)
+
+Attaching package: ‘data.table’
+
+The following objects are masked from ‘package:lubridate’:
+
+    hour, isoweek, mday, minute, month, quarter, second, wday, week,
+    yday, year
+
+The following objects are masked from ‘package:dplyr’:
+
+    between, first, last
+
+The following object is masked from ‘package:purrr’:
+
+    transpose
+
+> library(ggplot2)
+> library(conflicted)
+> library(dplyr)
+> library(zeallot)
+> 
+> # allocate RAM memory to Java
+> options(java.parameters = "-Xmx8G")
+> 
+> .libPaths(c("/projappl/project_2010418/R_PACKAGES", .libPaths()))
+> 
+> # my r5r R code here
+> 
+> # 1) build transport network, pointing to the path where OSM and GTFS data are stored
+> 
+> library(r5r)
+Please make sure you have already allocated some memory to Java by running:
+  options(java.parameters = '-Xmx2G').
+You should replace '2G' by the amount of memory you'll require. Currently, Java memory is set to -Xmx8G
+> 
+> rJava::.jinit()
+Picked up _JAVA_OPTIONS: -Djava.io.tmpdir=/projappl/project_2010418/JAVA_packages/temp
+> rJava::.jcall("java.lang.System", "S", "getProperty", "java.version")
+[1] "21"
+> 
+> #path <- "/Data_helsinki/Helsinki/"
+> #path <- "/projappl/project_2010418/Batch_run_test/R_code_for_BatchRun/Data/Helsinki_map_data"
+> 
+> path <- args[1] ## 
+> list.files(path)
+[1] "GTFS.zip"                              
+[2] "Helsinki_larger_region.osm.pbf"        
+[3] "Helsinki_larger_region.osm.pbf.mapdb"  
+[4] "Helsinki_larger_region.osm.pbf.mapdb.p"
+[5] "network_settings.json"                 
+[6] "network.dat"                           
+> path
+[1] "/projappl/project_2010418/Batch_run_test/R_code_for_BatchRun/Data/Helsinki_map_data"
+> 
+> 
+> ##slurm_array_id = as.numeric(args[6])
+> ##slurm_array_id
+> ##print(paste0(as.numeric(args[6])))
+> #slurm_array_id <- as.data.frame(args[0])
+> 
+> 
+> ### start recording start time to calculate network building time
+> start.time <- Sys.time()
+> r5r_core <- setup_r5(data_path = path)
+No raster .tif files found. Using elevation = 'NONE'.
+Using cached R5 version from /users/deysubhr/.cache/R/r5r/r5_jar_v7.1.0/r5-v7.1-all.jar
+
+Using cached network.dat from /projappl/project_2010418/Batch_run_test/R_code_for_BatchRun/Data/Helsinki_map_data/network.dat
+> end.time <- Sys.time()
+> time.taken <- round(end.time - start.time,2)
+> print(time.taken)
+Time difference of 5.76 secs
+> 
+> 
+> # 2) load origin/destination points and set arguments
+> #pois <- read.csv("/projappl/project_2010418/Batch_run_test/R_code_for_BatchRun/Data/h3_OD_Hexagons_Helsinki_latlon.csv")
+> #pois_O <- read.csv("/projappl/project_2010418/Batch_run_test/Data_helsinki/Helsinki/loco_Origin_Hex_LatLon_9Res.csv")
+> #pois_D <- read.csv("/projappl/project_2010418/Batch_run_test/Data_helsinki/Helsinki/loco_Destination_Hex_LatLon_9Res.csv")
+> 
+> pois <- read.csv(args[2])
+> mode <- c("WALK", "TRANSIT")
+> max_walk_time <- 30   # minutes
+> max_trip_duration <- 180 # minutes
+> departure_datetime_string <- paste(Datestr,Timestr,sep =" ")
+> departure_datetime <- as.POSIXct(departure_datetime_string,format = "%d-%m-%Y %H:%M:%S")
+> 
+> outFolder <- args[3]
+> outFile <- paste(outFolder, "/Helsinki_Hex_DetIte_r5r_Batch_",Batch_num, ".csv",sep ="")
+> outFile 
+[1] "/projappl/project_2010418/Batch_run_test/R_code_for_BatchRun/Batch_output/Helsinki_Hex_DetIte_r5r_Batch_3.csv"
+> ##############
+> origin_df =  pois[from_index:to_index,]
+> dest_df = pois[-c(from_index:to_index),]
+> 
+> #  get detailed info on multiple alternative routes
+> ### start recording start time
+> start.time <- Sys.time()
+> print("Starting Detailed Itineraries calculation using r5r, Now !")
+[1] "Starting Detailed Itineraries calculation using r5r, Now !"
+> det <- detailed_itineraries(r5r_core = r5r_core,
++                             origins = origin_df,#[37, ],
++                             destinations = dest_df,#[20, ],
++                             mode = mode,
++                             departure_datetime = departure_datetime,
++                             max_walk_time = max_walk_time,
++                             max_trip_duration = max_trip_duration,
++                             shortest_path = FALSE,
++                             drop_geometry = TRUE,
++                             all_to_all = TRUE)
+Jul 03, 2024 4:21:21 PM org.hsqldb.persist.Logger logInfoEvent
+INFO: dataFileCache open start
+Jul 03, 2024 5:21:20 PM org.geotools.referencing.factory.DeferredAuthorityFactory disposeBackingStore
+INFO: Disposing class org.geotools.referencing.factory.epsg.hsql.ThreadedHsqlEpsgFactory backing store
+Jul 03, 2024 5:21:20 PM org.hsqldb.persist.Logger logInfoEvent
+INFO: Database closed
+slurmstepd: error: *** JOB 22233905 ON r16c24 CANCELLED AT 2024-07-04T13:55:52 ***
