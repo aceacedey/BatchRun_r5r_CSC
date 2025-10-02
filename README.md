@@ -67,9 +67,9 @@ This Bash script orchestrates the parallel execution of the R script on the Slur
 
 #### Important GTFS Data Consideration
 
-⚠️ **Problem**: During this project, an issue was identified where the `detailed_itineraries()` function failed for some OD pairs due to an inconsistency in the official GTFS data (`stop_times.txt` entries were not in chronological order). Full discussion: [r5r Issue #510](https://github.com/ipeaGIT/r5r/issues/510).
+⚠️ **Problem**: During this project, an issue was identified where the `detailed_itineraries()` function failed for some OD pairs due to an inconsistency in the official GTFS data (it seems the issue originates from the `shpes.txt` entries). Full discussion: [r5r Issue #510](https://github.com/ipeaGIT/r5r/issues/510).
 
-✅ **Solution**: The GTFS file used in this repository has been pre-processed to correct these errors. Users who intend to use different GTFS files **must** validate their `stop_times.txt` data to ensure all events are chronological.
+✅ **Solution**: The GTFS file used in this repository has been pre-processed to correct these errors. Users who intend to use different GTFS files **must** validate their `shapes.txt` data to ensure all events are as the solution proposed in the issue.
 
 #### Configuration & Execution
 
