@@ -1,0 +1,91 @@
+#!/bin/bash
+#SBATCH --job-name=myBacthJobTest
+#SBATCH --account=project_2010418
+#SBATCH --time=2-23:59:59
+#SBATCH --partition=small            # pick one: small OR large
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=10
+#SBATCH --mem=16G                     # realistic per-job memory
+#SBATCH --array=1-300                # run 300 jobs in parallel
+#SBATCH --output=/scratch/project_2011005/Helsinki_Region_Emission_Calculation/Codes_Car_PT_CO2_calculation_Sept2024/PT_detailed_itinerary/Slurm_out_files/Slurm_out_files_301_600/%A_%a.out ## CHANGE HERE
+#SBATCH --error=/scratch/project_2011005/Helsinki_Region_Emission_Calculation/Codes_Car_PT_CO2_calculation_Sept2024/PT_detailed_itinerary/Slurm_out_files/Slurm_out_files_301_600/%A_%a.err ## CHANGE HERE
+
+# Slurm array task id # change values from [0, 300, 600, 900, 1200, 1500, 1800]
+iD=$((SLURM_ARRAY_TASK_ID + 300)) 
+
+# Departure datetime string
+D_DT=20-04-2023
+D_TM=07:30:00
+
+# Max walk time and trip duration
+m_WT=30   # minutes
+m_TD=120  # minutes
+
+# Path to ODs
+OD=/projappl/project_2011005/Helsinki_Region_Emission_Calculation/Codes_Car_PT_CO2_calculation_Sept2024/PT_detailed_itinerary/Batch_Run_r5rDetIti/R_code_for_BatchRun/Data/h3_OD_Hexagons_Helsinki_latlon_filtered.csv
+
+# Path to MapData
+MapData=/projappl/project_2011005/Helsinki_Region_Emission_Calculation/Codes_Car_PT_CO2_calculation_Sept2024/PT_detailed_itinerary/Batch_Run_r5rDetIti/R_code_for_BatchRun/Data/Helsinki_map_data
+
+# Outputname for TXT-files
+OUTNAME=DetIti_DDMMYY
+
+# Path to Results
+RESULTS=/scratch/project_2011005/Helsinki_Region_Emission_Calculation/Codes_Car_PT_CO2_calculation_Sept2024/PT_detailed_itinerary/Batch_output/Batch_output_301_600 ## CHANGE HERE
+
+# Load modules
+module load biojava
+module load r-env
+
+export _JAVA_OPTIONS=-Djava.io.tmpdir=/projappl/project_2010418/JAVA_packages/temp
+
+# Data slicing indexes
+chunk_size=5
+frm=$((1 + chunk_size * iD))
+to=$((frm +chunk_size-1))
+
+echo "Job Started : $(date)"
+echo "SLURM_ARRAY_TASK_ID = $SLURM_ARRAY_TASK_ID, shifted ID = $iD"
+
+# Look for any file in $RESULTS that ends with _B_${iD}.csv
+OUTPUT_FILE=$(ls ${RESULTS}/*_B_${iD}.csv 2>/dev/null)
+
+# Check if any file matching the pattern exists in the results directory
+if ls ${RESULTS}/*_B_${iD}.csv 1>/dev/null 2>/dev/null; then
+    echo "Output for ID $iD already exists, skipping job $SLURM_ARRAY_TASK_ID"
+    exit 0
+fi
+
+# ---------------------------
+# Fail-safe retry mechanism
+# ---------------------------
+MAX_RETRIES=5
+RETRY=0
+SUCCESS=0
+
+while [ $RETRY -lt $MAX_RETRIES ]; do
+    echo "Attempt $((RETRY+1)) for job $SLURM_ARRAY_TASK_ID"
+    
+    Rscript /projappl/project_2011005/Helsinki_Region_Emission_Calculation/Codes_Car_PT_CO2_calculation_Sept2024/PT_detailed_itinerary/Batch_Run_r5rDetIti/R_code_for_BatchRun/rcode_MobiTartu2024.R \
+        $MapData $OD $RESULTS $D_DT $D_TM $frm $to $iD $m_WT $m_TD
+    
+    EXIT_CODE=$?
+    
+    if [ $EXIT_CODE -eq 0 ]; then
+        echo "Job $SLURM_ARRAY_TASK_ID succeeded on attempt $((RETRY+1))"
+        SUCCESS=1
+        break
+    else
+        echo "Job $SLURM_ARRAY_TASK_ID failed with exit code $EXIT_CODE (attempt $((RETRY+1)))"
+        RETRY=$((RETRY+1))
+        sleep 15  # wait a bit before retry
+    fi
+done
+
+if [ $SUCCESS -ne 1 ]; then
+    echo "Job $SLURM_ARRAY_TASK_ID FAILED after $MAX_RETRIES attempts"
+    exit 1
+fi
+
+echo "Job stopped : $(date)"

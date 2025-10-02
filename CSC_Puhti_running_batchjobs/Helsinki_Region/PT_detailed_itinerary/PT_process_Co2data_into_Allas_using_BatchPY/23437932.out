@@ -1,0 +1,7 @@
+java  1.8.0_302  environment loaded 
+------------------------------------------
+Geoconda 3.11.9, GIS libraries for Python
+https://docs.csc.fi/apps/geoconda
+------------------------------------------
+Job Started :Wed Sep 25 04:18:12 EEST 2024
+slurmstepd: error: *** JOB 23437932 ON r01c31 CANCELLED AT 2024-09-25T08:12:02 ***
