@@ -8,18 +8,19 @@ This repository contains a complete high-performance computing (HPC) workflow fo
 The scripts are optimized for HPC environments managed by the Slurm workload manager (e.g., CSC Puhti).
 
 ## Repository Structure
+
+```
 .
-├── Batch_Run_r5rDetIti
+├── README.md
+├── Batch_Run_r5rDetIti/
 │   ├── BatchRunCode_r5r_detiti_main_revised_0_300.txt
 │   └── rcode_MobiTartu2024.R
-│
-├── PT_process_Co2data_into_Allas_using_BatchPY
-│   ├── batchRun_process_detIti_withCo2_pyfile.txt
-│   ├── ProcessData_and_SaveToAllas.py
-│   └── DATA_CO2
-│       └── LCA_gCO2_per_pkm_by_transport_mode.csv
-│
-└── README.md
+└── PT_process_Co2data_into_Allas_using_BatchPY/
+    ├── batchRun_process_detIti_withCo2_pyfile.txt
+    ├── ProcessData_and_SaveToAllas.py
+    └── DATA_CO2/
+        └── LCA_gCO2_per_pkm_by_transport_mode.csv
+```
 
 ## Methodological Context
 
